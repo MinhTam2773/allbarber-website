@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AllBarber — Run the whole shop from one screen</title>
+<meta name="description" content="AllBarber is barbershop management software: online booking, walk-in queue, front-desk POS, staff schedules, payroll and analytics in one platform. Built in Calgary.">
+<meta property="og:title" content="AllBarber — Run the whole shop from one screen">
+<meta property="og:description" content="Booking, walk-ins, front desk, staff and analytics for modern barbershops.">
+<meta property="og:url" content="https://allbarber.website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23161311'/><path d='M9 4h14v24H9z' fill='%23f4ede1'/><path d='M9 8l14-6v5L9 13zm0 9l14-6v5L9 22zm0 9l14-6v5L9 31z' fill='%23b8322a'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Familjen+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f4ede1;
+    --paper-2: #ebe1d0;
+    --ink: #161311;
+    --ink-soft: #4a423b;
+    --line: #d6c9b4;
+    --red: #b8322a;
+    --navy: #1f3a5f;
+    --brass: #b08a4a;
+    --display: "Gloock", Georgia, serif;
+    --body: "Familjen Grotesk", "Helvetica Neue", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    --gutter: clamp(16px, 4vw, 48px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  /* paper grain */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 100;
+    opacity: .35; mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3  0 0 0 0 0.25  0 0 0 0 0.2  0 0 0 .18 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  a { color: inherit; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 var(--gutter); }
+  .mono { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+
+  /* the barber pole: a fixed stripe down the left edge */
+  .pole {
+    position: fixed; top: 0; bottom: 0; left: 0; width: 10px; z-index: 50;
+    background: repeating-linear-gradient(-45deg, var(--red) 0 12px, var(--paper) 12px 24px, var(--navy) 24px 36px, var(--paper) 36px 48px);
+    background-size: 100% 68px;
+    animation: spin 2.4s linear infinite;
+  }
+  @keyframes spin { to { background-position: 0 68px; } }
+
+  /* nav */
+  nav { border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+  .logo { font-family: var(--display); font-size: 26px; text-decoration: none; letter-spacing: -.01em; }
+  .logo span { color: var(--red); }
+  nav ul { display: flex; gap: 32px; list-style: none; align-items: center; }
+  nav ul a { text-decoration: none; font-weight: 500; font-size: 15px; }
+  nav ul a:not(.btn):hover { color: var(--red); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--ink); color: var(--paper);
+    padding: 12px 20px; border-radius: 999px;
+    text-decoration: none; font-weight: 600; font-size: 15px;
+    transition: transform .2s, background .2s;
+  }
+  .btn:hover { background: var(--red); transform: translateY(-1px); }
+  .btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+  .btn.ghost:hover { background: var(--ink); color: var(--paper); }
+
+  /* hero */
+  .hero { padding: clamp(48px, 8vw, 104px) 0 clamp(56px, 8vw, 96px); }
+  .hero .wrap { display: grid; grid-template-columns: 1.15fr .85fr; gap: clamp(32px, 5vw, 72px); align-items: center; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 10px; color: var(--ink-soft); margin-bottom: 24px; }
+  .eyebrow::before { content: ""; width: 28px; height: 1.5px; background: var(--red); }
+  h1 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(46px, 7.4vw, 96px); line-height: .96; letter-spacing: -.025em;
+  }
+  h1 em { font-style: italic; color: var(--red); }
+  .lede { font-size: clamp(18px, 1.6vw, 21px); color: var(--ink-soft); max-width: 34ch; margin: 28px 0 36px; }
+  .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .fine { margin-top: 18px; color: var(--ink-soft); }
+
+  /* hero: the walk-in ticket */
+  .ticket {
+    position: relative;
+    background: #fffaf1;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 26px 26px 18px;
+    box-shadow: 0 1px 0 var(--line), 0 30px 60px -30px rgba(22,19,17,.35);
+    transform: rotate(1.5deg);
+  }
+  .ticket::before, .ticket::after {
+    content: ""; position: absolute; left: -1px; right: -1px; height: 10px;
+    background: radial-gradient(circle at 6px -1px, var(--paper) 6px, transparent 6.5px) 0 0 / 14px 10px repeat-x;
+  }
+  .ticket::before { top: -1px; }
+  .ticket::after { bottom: -1px; transform: rotate(180deg); }
+  .ticket-head { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 14px; border-bottom: 1.5px dashed var(--line); }
+  .ticket-head b { font-family: var(--display); font-weight: 400; font-size: 24px; }
+  .live { display: inline-flex; align-items: center; gap: 7px; color: var(--red); }
+  .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: blink 1.4s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: .2; } }
+  .queue { list-style: none; }
+  .queue li {
+    display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center;
+    padding: 13px 0; border-bottom: 1px solid var(--paper-2);
+    opacity: 0; transform: translateY(8px);
+    animation: rise .6s cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  .queue li:nth-child(1) { animation-delay: .5s; }
+  .queue li:nth-child(2) { animation-delay: .65s; }
+  .queue li:nth-child(3) { animation-delay: .8s; }
+  .queue li:nth-child(4) { animation-delay: .95s; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  .num { font-family: var(--mono); font-size: 13px; color: var(--ink-soft); }
+  .who b { display: block; font-weight: 600; font-size: 16px; }
+  .who small { color: var(--ink-soft); font-size: 13.5px; }
+  .tag { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; white-space: nowrap; }
+  .tag.chair { background: var(--ink); color: var(--paper); }
+  .tag.next { background: var(--red); color: #fff; }
+  .tag.wait { box-shadow: inset 0 0 0 1px var(--line); color: var(--ink-soft); }
+  .ticket-foot { display: flex; justify-content: space-between; padding-top: 14px; color: var(--ink-soft); }
+
+  /* marquee strip */
+  .strip { background: var(--ink); color: var(--paper); overflow: hidden; padding: 16px 0; }
+  .strip-track { display: flex; gap: 48px; width: max-content; animation: slide 38s linear infinite; }
+  .strip span { font-family: var(--display); font-size: 26px; white-space: nowrap; display: inline-flex; align-items: center; gap: 48px; }
+  .strip span::after { content: "✂"; color: var(--red); font-size: 18px; }
+  @keyframes slide { to { transform: translateX(-50%); } }
+
+  /* section heads */
+  section.block { padding: clamp(72px, 10vw, 128px) 0; }
+  .head { display: grid; grid-template-columns: 220px 1fr; gap: 32px; margin-bottom: clamp(40px, 6vw, 72px); }
+  .head .mono { color: var(--red); padding-top: 14px; }
+  h2 { font-family: var(--display); font-weight: 400; font-size: clamp(36px, 5vw, 64px); line-height: 1; letter-spacing: -.02em; max-width: 16ch; }
+  h2 em { color: var(--red); }
+
+  /* features: numbered menu-board list */
+  .menu { display: grid; grid-template-columns: 1fr 1fr; border-top: 1.5px solid var(--ink); }
+  .item { display: grid; grid-template-columns: 56px 1fr; gap: 8px; padding: 30px 28px 34px 0; border-bottom: 1px solid var(--line); }
+  .item:nth-child(odd) { border-right: 1px solid var(--line); }
+  .item:nth-child(even) { padding-left: 28px; }
+  .item .num { padding-top: 7px; }
+  .item h3 { font-family: var(--display); font-weight: 400; font-size: 28px; line-height: 1.1; margin-bottom: 10px; }
+  .item p { color: var(--ink-soft); max-width: 42ch; }
+
+  /* roles */
+  .roles-bg { background: var(--paper-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .roles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .role { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 30px 28px 32px; position: relative; overflow: hidden; transition: transform .25s; }
+  .role:hover { transform: translateY(-4px); }
+  .role::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 5px; }
+  .role:nth-child(1)::before { background: var(--red); }
+  .role:nth-child(2)::before { background: var(--navy); }
+  .role:nth-child(3)::before { background: var(--brass); }
+  .role .mono { color: var(--ink-soft); }
+  .role h3 { font-family: var(--display); font-weight: 400; font-size: 34px; margin: 10px 0 18px; }
+  .role ul { list-style: none; }
+  .role li { padding: 9px 0; border-top: 1px dashed var(--line); font-size: 16px; }
+
+  /* pricing: price-list board */
+  .board { background: var(--ink); color: var(--paper); border-radius: 8px; padding: clamp(28px, 4vw, 56px); }
+  .plan { display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; padding: 28px 0; border-bottom: 1px dashed rgba(244,237,225,.25); align-items: baseline; }
+  .plan:first-child { padding-top: 0; }
+  .plan:last-of-type { border-bottom: 0; }
+  .plan h3 { font-family: var(--display); font-weight: 400; font-size: clamp(30px, 3.4vw, 42px); display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .plan h3 .tag { background: var(--red); color: #fff; font-size: 10.5px; }
+  .price { font-family: var(--display); font-size: clamp(30px, 3.4vw, 42px); }
+  .price small { font-family: var(--body); font-size: 15px; opacity: .6; }
+  .plan p { color: rgba(244,237,225,.65); grid-column: 1 / -1; font-size: 15.5px; }
+  .plan p b { color: var(--paper); font-weight: 500; }
+  .board-foot { margin-top: 28px; padding-top: 24px; border-top: 1.5px solid rgba(244,237,225,.25); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; color: rgba(244,237,225,.7); }
+
+  /* story + cta */
+  .story { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(32px, 6vw, 96px); align-items: end; }
+  .story p { font-size: 19px; color: var(--ink-soft); margin-bottom: 18px; max-width: 46ch; }
+  .cta { text-align: center; padding: clamp(80px, 12vw, 152px) 0; border-top: 1px solid var(--line); }
+  .cta h2 { margin: 0 auto 32px; max-width: 14ch; font-size: clamp(42px, 6.5vw, 84px); }
+  .cta .cta-row { justify-content: center; }
+
+  footer { border-top: 1.5px solid var(--ink); padding: 28px 0 40px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; color: var(--ink-soft); }
+
+  /* scroll reveal */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .8s cubic-bezier(.2,.8,.2,1), transform .8s cubic-bezier(.2,.8,.2,1); }
+  .reveal.in { opacity: 1; transform: none; }
+  .no-js .reveal { opacity: 1; transform: none; }
+
+  @media (max-width: 900px) {
+    .hero .wrap, .story { grid-template-columns: 1fr; }
+    .ticket { transform: none; max-width: 480px; }
+    .head { grid-template-columns: 1fr; gap: 12px; }
+    .head .mono { padding-top: 0; }
+    .menu { grid-template-columns: 1fr; }
+    .item:nth-child(odd) { border-right: 0; }
+    .item:nth-child(even) { padding-left: 0; }
+    .roles { grid-template-columns: 1fr; }
+    nav ul li:not(:last-child) { display: none; }
+  }
+  @media (max-width: 520px) {
+    body { font-size: 16px; }
+    .pole { width: 6px; }
+    .plan { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .queue li, .reveal { opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body class="no-js">
+<div class="pole" aria-hidden="true"></div>
+
+<nav>
+  <div class="wrap">
+    <a class="logo" href="#">All<span>Barber</span></a>
+    <ul>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#roles">Who it's for</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a class="btn" href="#contact">Book a demo</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <p class="eyebrow mono">Barbershop management software</p>
+      <h1>Run the whole shop from <em>one screen.</em></h1>
+      <p class="lede">Bookings, walk-ins, the front desk, your barbers and your numbers. AllBarber puts every part of the shop in one place.</p>
+      <div class="cta-row">
+        <a class="btn" href="#contact">Book a demo →</a>
+        <a class="btn ghost" href="#pricing">See pricing</a>
+      </div>
+      <p class="fine mono">14-day free trial · No credit card</p>
+    </div>
+
+    <div class="ticket" role="img" aria-label="Example of the AllBarber walk-in queue">
+      <div class="ticket-head">
+        <b>Today's queue</b>
+        <span class="live mono">Live</span>
+      </div>
+      <ol class="queue">
+        <li><span class="num">#041</span><span class="who"><b>Marcus T.</b><small>Skin fade · with Andre</small></span><span class="tag chair">In chair</span></li>
+        <li><span class="num">#042</span><span class="who"><b>Priya S.</b><small>Beard trim · booked online</small></span><span class="tag next">Next up</span></li>
+        <li><span class="num">#043</span><span class="who"><b>Walk-in</b><small>Checked in at kiosk</small></span><span class="tag wait">~15 min</span></li>
+        <li><span class="num">#044</span><span class="who"><b>Jordan L.</b><small>Cut + line-up · 2:30 PM</small></span><span class="tag wait">~30 min</span></li>
+      </ol>
+      <div class="ticket-foot mono"><span>3 chairs open</span><span>Wed 2:05 PM</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="strip" aria-hidden="true">
+  <div class="strip-track">
+    <span>Online booking</span><span>Walk-in queue</span><span>Kiosk check-in</span><span>Front-desk POS</span><span>Staff schedules</span><span>Payroll</span><span>Client CRM</span><span>Revenue reports</span>
+    <span>Online booking</span><span>Walk-in queue</span><span>Kiosk check-in</span><span>Front-desk POS</span><span>Staff schedules</span><span>Payroll</span><span>Client CRM</span><span>Revenue reports</span>
+  </div>
+</div>
+
+<section class="block" id="features">
+  <div class="wrap">
+    <div class="head reveal">
+      <p class="mono">01 — What's included</p>
+      <h2>Everything the shop runs on, <em>in one place.</em></h2>
+    </div>
+    <div class="menu">
+      <div class="item reveal"><span class="num">01</span><div><h3>Online booking</h3><p>Clients see real-time availability and book any barber 24/7, from any device. No more phone tag during a cut.</p></div></div>
+      <div class="item reveal"><span class="num">02</span><div><h3>Walk-in queue</h3><p>Walk-ins check in at a kiosk and see their wait. Booked clients and walk-ins share one fair, visible line.</p></div></div>
+      <div class="item reveal"><span class="num">03</span><div><h3>Front desk &amp; POS</h3><p>Check clients in, take payment and manage the day's appointments from a single front-desk screen.</p></div></div>
+      <div class="item reveal"><span class="num">04</span><div><h3>Staff &amp; payroll</h3><p>Build schedules, set availability and work out each barber's pay without a spreadsheet.</p></div></div>
+      <div class="item reveal"><span class="num">05</span><div><h3>Reports that matter</h3><p>Revenue, staff performance, top services and returning clients, updated as the day goes on.</p></div></div>
+      <div class="item reveal"><span class="num">06</span><div><h3>Many locations, one account</h3><p>Compare shops side by side and see every location's numbers from one place.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="block roles-bg" id="roles">
+  <div class="wrap">
+    <div class="head reveal">
+      <p class="mono">02 — Who it's for</p>
+      <h2>One app, a view for <em>everyone</em> in the shop.</h2>
+    </div>
+    <div class="roles">
+      <div class="role reveal">
+        <p class="mono">For the</p><h3>Owner</h3>
+        <ul><li>Dashboard across all locations</li><li>Sales &amp; revenue reports</li><li>Staff, schedules &amp; payroll</li><li>Business &amp; payment settings</li></ul>
+      </div>
+      <div class="role reveal">
+        <p class="mono">For the</p><h3>Barber</h3>
+        <ul><li>Your schedule at a glance</li><li>Set your own availability</li><li>Know your regulars</li><li>See your paycheck</li></ul>
+      </div>
+      <div class="role reveal">
+        <p class="mono">For the</p><h3>Front desk</h3>
+        <ul><li>Live walk-in queue</li><li>Check-ins &amp; appointments</li><li>Point of sale</li><li>Customer lookup</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="pricing">
+  <div class="wrap">
+    <div class="head reveal">
+      <p class="mono">03 — Price list</p>
+      <h2>Simple plans. <em>Cancel anytime.</em></h2>
+    </div>
+    <div class="board reveal">
+      <div class="plan">
+        <h3>Starter</h3><span class="price">$49<small> /mo</small></span>
+        <p><b>For solo barbers and 1–2 chair shops.</b> Walk-in management, basic queue, simple POS, 1 staff account, basic reporting.</p>
+      </div>
+      <div class="plan">
+        <h3>Pro <span class="tag mono">Most popular</span></h3><span class="price">$149<small> /mo</small></span>
+        <p><b>For growing shops with 3–10 barbers.</b> Everything in Starter, plus unlimited staff, kiosk check-in, loyalty program, advanced analytics, email marketing and priority support.</p>
+      </div>
+      <div class="plan">
+        <h3>Franchise</h3><span class="price">Custom</span>
+        <p><b>For multi-location brands.</b> Everything in Pro, plus SSO, data export, custom integrations, API access, white-label options and a dedicated account manager.</p>
+      </div>
+      <div class="board-foot mono"><span>Every plan: 14-day free trial</span><span>No credit card · No contracts</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="block roles-bg">
+  <div class="wrap story">
+    <div class="reveal">
+      <p class="mono" style="color:var(--red);margin-bottom:20px">04 — Our story</p>
+      <h2>Built in Calgary, <em>with</em> real barbershops.</h2>
+    </div>
+    <div class="reveal">
+      <p>AllBarber is made by HappiShoppi, a small team of developers in Calgary, Alberta.</p>
+      <p>We started by watching how shops really run: paper waitlists, group chats for schedules, payroll at midnight. Then we built one place to handle all of it.</p>
+    </div>
+  </div>
+</section>
+
+<section class="cta" id="contact">
+  <div class="wrap reveal">
+    <p class="mono" style="color:var(--red);margin-bottom:24px">Get started</p>
+    <h2>Give your shop a better system.</h2>
+    <div class="cta-row">
+      <a class="btn" href="mailto:hello@allbarber.website?subject=AllBarber%20demo">Book a demo →</a>
+      <a class="btn ghost" href="mailto:hello@allbarber.website">hello@allbarber.website</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap mono">
+    <span>© 2026 AllBarber · HappiShoppi</span>
+    <span>Calgary, Alberta, Canada</span>
+  </div>
+</footer>
+
+<script>
+  document.body.classList.remove("no-js");
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
+  }, { threshold: 0.15 });
+  document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+</script>
+</body>
+</html>
